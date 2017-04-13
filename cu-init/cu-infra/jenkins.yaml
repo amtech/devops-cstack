@@ -1,0 +1,60 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: jenkins
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        task: infrastructure
+        k8s-app: jenkins
+    spec:
+      containers:
+      - name: jenkins
+        image: cloudunit/jenkins
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: JAVA_OPTS
+          value: -Xmx512m
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - mountPath: /var/jenkins_home
+          name: jenkins-home
+      volumes:
+        - name: jenkins-home
+          flocker:
+            datasetName: cu-jekins
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jenkins
+  labels:
+    task: infrastructure
+    k8s-app: jenkins
+spec:
+  selector:
+    k8s-app: jenkins
+  ports:
+  - name: jenkinsadmin
+    port: 8080
+    targetPort: 8080
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: jenkins
+  labels:
+    task: infrastructure
+    k8s-app: jenkins
+spec:
+  rules:
+  - host: jenkins.133.133.134.119.xip.io
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: jenkins
+          servicePort: jenkinsadmin

@@ -1,0 +1,62 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: mysql
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        task: infrastructure
+        k8s-app: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:5.7.4
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: ${MYSQL_ROOT_PASSWORD}
+        - name: MYSQL_DATABASE
+          value: ${MYSQL_DATABASE}
+        ports:
+        - containerPort: 3306
+        volumeMounts:
+        - mountPath: /var/lib/mysql
+          name: mysqldata
+      volumes:
+        - name: mysqldata
+          flocker:
+            datasetName: cu-mysql
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  labels:
+    task: infrastructure
+    k8s-app: mysql
+spec:
+  selector:
+    k8s-app: mysql
+  ports:
+  - name: mysqladmin
+    port: 3306
+    targetPort: 3306
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: mysql
+  labels:
+    task: infrastructure
+    k8s-app: mysql
+spec:
+  rules:
+  - host: mysql.133.133.134.119.xip.io
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: mysql
+          servicePort: mysqladmin

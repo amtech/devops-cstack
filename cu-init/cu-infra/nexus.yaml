@@ -1,0 +1,58 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: nexus
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        task: infrastructure
+        k8s-app: nexus
+    spec:
+      containers:
+      - name: nexus
+        image: sonatype/nexus:2.14.3
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8081
+        - containerPort: 8123
+        volumeMounts:
+        - mountPath: /nexus-data
+          name: nexus-data
+      volumes:
+        - name: nexus-data
+          flocker:
+            datasetName: cu-nexus
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nexus
+  labels:
+    task: infrastructure
+    k8s-app: nexus
+spec:
+  selector:
+    k8s-app: nexus
+  ports:
+  - name: nexusadmin
+    port: 8081
+    targetPort: 8081
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: nexus
+  labels:
+    task: infrastructure
+    k8s-app: nexus
+spec:
+  rules:
+  - host: nexus.133.133.134.119.xip.io
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: nexus
+          servicePort: nexusadmin

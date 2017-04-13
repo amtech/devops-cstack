@@ -1,0 +1,57 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: redis
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        task: infrastructure
+        k8s-app: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:3.0.1
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 6379
+        volumeMounts:
+        - mountPath: /data
+          name: redis-data
+      volumes:
+        - name: redis-data
+          flocker:
+            datasetName: cu-redis
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  labels:
+    task: infrastructure
+    k8s-app: redis
+spec:
+  selector:
+    k8s-app: redis
+  ports:
+  - name: redisadmin
+    port: 6379
+    targetPort: 6379
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: redis
+  labels:
+    task: infrastructure
+    k8s-app: redis
+spec:
+  rules:
+  - host: redis.133.133.134.119.xip.io
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: redis
+          servicePort: redisadmin

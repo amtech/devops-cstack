@@ -1,0 +1,67 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: gitlab
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        task: infrastructure
+        k8s-app: gitlab
+    spec:
+      containers:
+      - name: gitlab
+        image: gitlab/gitlab-ce:8.14.5-ce.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - mountPath: /etc/gitlab
+          name: gitlab-config
+        - mountPath: /var/log/gitlab
+          name: gitlab-logs
+        - mountPath: /var/opt/gitlab
+          name: gitlab-data
+      volumes:
+        - name: gitlab-config
+          flocker:
+            datasetName: cu-gitlab-config
+        - name: gitlab-logs
+          flocker:
+            datasetName: cu-gitlab-logs
+        - name: gitlab-data
+          flocker:
+            datasetName: cu-gitlab-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gitlab
+  labels:
+    task: infrastructure
+    k8s-app: gitlab
+spec:
+  selector:
+    k8s-app: gitlab
+  ports:
+  - name: gitlabadmin
+    port: 80
+    targetPort: 80
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: gitlab
+  labels:
+    task: infrastructure
+    k8s-app: gitlab
+spec:
+  rules:
+  - host: gitlab.133.133.134.119.xip.io
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: gitlab
+          servicePort: gitlabadmin
